@@ -1,0 +1,14 @@
+action_hz: 15.0
+replan_steps: 8
+rate_cap: 1.5
+initial_latency_s: 0.1
+max_input_age_s: 1.0
+max_observation_age_s: 2.0
+max_state_camera_skew_s: 0.2
+actuator:
+  units: metres_per_action_step
+  positive: [0.02, 0.02, 0.03]
+  negative: [0.02, 0.03, 0.02]
+  source: "Synthetic mock fixture. NOT Flexiv calibration."
+notes: "Only for offline/mock integration checks."
+

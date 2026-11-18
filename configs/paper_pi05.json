@@ -1,0 +1,17 @@
+{
+  "source": "https://arxiv.org/abs/2611.01390v1",
+  "backend": "relative_increment_reference_only",
+  "action_hz": 20,
+  "horizon": 50,
+  "core": {
+    "replan_steps": 8,
+    "rate_cap": 1.5,
+    "rate_grid": 0.25,
+    "latency_steps": 2,
+    "gripper_min_steps": 2,
+    "gripper_max_steps": 12,
+    "gripper_speed_threshold": 0.02
+  },
+  "actuator": {"positive": [2, 3, 3], "negative": [2, 3, 2]},
+  "note": "LIBERO action units; never feed these bounds to the real-robot adapter."
+}
