@@ -57,3 +57,15 @@ PNG/PDF 图表已渲染并检查。原始动作、逐次计时、显存采样、
 - 上述 HDF5 的 complete 标志、时间戳顺序、位姿/力/原始预测字段及视频 manifest 已核验。成功信号仅为模拟接口测试，不代表实际任务成功。
 - 成功试次经统一 exporter 导出 CSV，再经 metrics 汇总；按 task/mode/method 分组。超时、待评分、重复试次、旧控制 token、清理失败和取消在自动化测试中覆盖。
 - 自动化测试：PTS 43 项通过。
+
+## 2026-11-20：ForceBenchWeb 上游更新兼容
+
+ForceBenchWeb 更新至 upstream `a8fe9b2` 后，polish 默认 run 配置改用
+`polish_curve_v4_pi05.yaml`，任务名校验同步为 `polish_curve_v4`。
+旧工作区中的图像裁剪和姿态分支扩展已与上游合并保留。
+
+- PTS 自动化测试：43 项通过。
+- polish 模拟超时试次：timeout / false；351 条独立状态、253 条控制/策略记录，双相机各 62 帧。
+- flip 模拟显式成功停止：2.771 秒；485 条状态、352 条控制/策略记录，global/wrist 各 79 帧。
+- HDF5 完成标记、时间戳、视频文件及评分导出/汇总通过检查。
+- 本次没有连接机器人或加载真实模型；模拟成功信号只用于验证接口。

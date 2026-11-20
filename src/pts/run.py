@@ -74,9 +74,9 @@ async def run_trial(args):
     if args.decoder is not None:
         settings = replace(settings, decoder=args.decoder)
     run_config = args.run_config or Path(args.forcebench_root) / "configs/runs" / {
-        "flip": "flipping_pi05.yaml", "polish": "polish_curve_pi05.yaml"}[args.task]
+        "flip": "flipping_pi05.yaml", "polish": "polish_curve_v4_pi05.yaml"}[args.task]
     resolved = load_run_configuration(run_config)
-    if resolved.layers["task"]["name"] != {"flip": "flipping", "polish": "polish_curve"}[args.task]:
+    if resolved.layers["task"]["name"] != {"flip": "flipping", "polish": "polish_curve_v4"}[args.task]:
         raise ValueError("ForceBench run config does not match --task")
     # This resolved object belongs to this process. Existing YAML files stay intact.
     resolved.layers["baseline"].setdefault("visualizer", {})["enabled"] = args.visualize

@@ -4,7 +4,13 @@
 
 ## 模型和工作区
 
-控制机需要匹配的 ForceBench 源码和原机器人环境。默认工作区布局：
+控制机需要匹配的 ForceBench 源码和原机器人环境。
+
+当前入口适配 ForceBenchWeb `a8fe9b2`（2026-11-11 的 upstream main）。polish 使用
+`configs/runs/polish_curve_v4_pi05.yaml`，任务名为 `polish_curve_v4`；旧版
+`polish_curve_pi05.yaml` 已被上游替换。更新控制端时同时更新 ForceBenchWeb。
+
+默认工作区布局：
 
 ```text
 workspace/
