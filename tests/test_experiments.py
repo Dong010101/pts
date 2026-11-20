@@ -26,3 +26,10 @@ def test_metrics_include_failures_and_pool_time():
     assert report["successes_per_hour"] == 36
     assert report["successes_per_1000_steps"] == pytest.approx(2 / 3)
     assert report["mean_success_s"] == 10 and report["mean_attempt_s"] == 50
+
+
+def test_metrics_do_not_pool_different_tasks_or_mock_and_hardware():
+    rows = [{"method": "PTS", "trial_id": str(i), "task": task, "mode": mode,
+             "success": 1, "duration_s": 10, "control_steps": 150}
+            for i, (task, mode) in enumerate([("flip", "mock"), ("flip", "hardware"), ("polish", "hardware")])]
+    assert set(summarize(rows)) == {"flip/mock/PTS", "flip/hardware/PTS", "polish/hardware/PTS"}

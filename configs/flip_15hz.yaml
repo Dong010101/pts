@@ -1,0 +1,21 @@
+task: flip
+# Bring-up profile: deterministic one-step + async 1x. Select acceleration on
+# development layouts AFTER providing a measured actuator box for this robot.
+action_hz: 15.0
+replan_steps: 8
+rate_cap: 1.0
+initial_latency_s: 0.15
+latency_window: 32
+gripper_min_s: 0.1
+gripper_max_s: 0.6
+gripper_speed_threshold: 0.02
+gripper_width_to_finger_speed: 0.5
+gripper_command_threshold: 0.02
+max_input_age_s: 0.25
+max_observation_age_s: 1.0
+inference_timeout_s: 5.0
+observation_camera: global
+max_state_camera_skew_s: 0.05
+decoder: zero_noise_one_step
+actuator: null
+notes: "15 Hz matches the original flip checkpoint; gripper/latency values are provisional, not measured on Flexiv."

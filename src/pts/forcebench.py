@@ -45,6 +45,8 @@ async def call_io(function, *args):
 
 
 def check_server_metadata(metadata, settings):
+    if settings.task is not None and metadata.get("task") != settings.task:
+        raise ValueError(f"server task must match {settings.task}")
     pts = metadata.get("pts", {})
     if pts.get("decoder") != settings.decoder:
         raise ValueError(f"server decoder {pts.get('decoder')!r} != required {settings.decoder!r}; use pts.server")
@@ -176,6 +178,8 @@ class PTSRunner(StandardRunner):
             anchor_rotation = Rotation.from_quat(initial.quaternion)
             last_pose = ScheduledPose(anchor_position, initial.quaternion, 0, {})
             executor = MotionExecutor(DriverProxy(), self.profile, recorder_hook=record_control)
+            if getattr(self, "trial", None) is not None:
+                self.trial.start()
 
             async def infer_chunk():
                 frames = await call_io(self.camera_hub.read)
@@ -344,7 +348,7 @@ class PTSRunner(StandardRunner):
                 log.close()
             self._preflight_capabilities = self._preflight_config = None
             self._camera_prestarted = self._robot_prestarted = False
-            if error is None and cleanup_errors:
+            if cleanup_errors:
                 raise cleanup_errors[0]
         return RunnerResult(planner_steps, commands_sent, started_at, time.time())
 

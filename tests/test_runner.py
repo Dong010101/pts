@@ -107,3 +107,9 @@ def test_rejects_model_frequency_mismatch():
     metadata["control_frequency_hz"] = 20
     with pytest.raises(ValueError, match="control_frequency_hz"):
         check_server_metadata(metadata, RobotSettings(action_hz=15))
+
+
+def test_rejects_server_for_the_other_task():
+    metadata = MockTransport(task="polish").server_metadata
+    with pytest.raises(ValueError, match="task must match flip"):
+        check_server_metadata(metadata, RobotSettings(task="flip"))

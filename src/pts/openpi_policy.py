@@ -23,7 +23,8 @@ class DecoderPolicy:
             result = self.policy.infer(observation)
         result = dict(result)
         actions = np.asarray(result["actions"])
-        if actions.ndim != 2 or len(actions) != self.horizon or not np.all(np.isfinite(actions)):
+        if (actions.ndim != 2 or len(actions) != self.horizon or not np.all(np.isfinite(actions))
+                or (self.metadata.get("pts", {}).get("action_space") == "absolute_tcp" and actions.shape[1] != 7)):
             raise ValueError("model returned a malformed or nonfinite action chunk")
         # OpenPI returns host numpy arrays, so this includes GPU completion and
         # output transforms, unlike a timer around an asynchronous JAX dispatch.
@@ -37,18 +38,13 @@ class DecoderPolicy:
 
 
 def create_decoder(config_name, checkpoint, *, decoder="zero_noise_one_step", action_space="absolute_tcp"):
-    from openpi.policies.policy_config import create_trained_policy
-    from openpi.training.config import get_config
-
-    config = get_config(config_name)
+    from .model_contract import load_config
     if decoder not in {"zero_noise_one_step", "stochastic_10_step"}:
         raise ValueError("unsupported decoder")
     if action_space not in {"absolute_tcp", "relative_increment"}:
         raise ValueError("unsupported action space")
-    if not getattr(config.model, "pi05", False):
-        raise ValueError("this launcher requires a pi0.5 training configuration")
-    if action_space == "absolute_tcp" and "absolute_tcp_pose" not in config.policy_metadata.get("action", ""):
-        raise ValueError("absolute_tcp requires a matching TCP policy action declaration in the OpenPI training config")
+    config = load_config(config_name, checkpoint, action_space=action_space)
+    from openpi.policies.policy_config import create_trained_policy
     num_steps = 1 if decoder == "zero_noise_one_step" else 10
     policy = create_trained_policy(config, checkpoint, sample_kwargs={"num_steps": num_steps})
     metadata = {

@@ -11,6 +11,7 @@ from .core import ActuatorBox, PTSConfig
 
 @dataclass(frozen=True)
 class RobotSettings:
+    task: str | None = None
     action_hz: float = 15.0
     replan_steps: float = 8.0
     rate_cap: float = 1.0
@@ -32,6 +33,8 @@ class RobotSettings:
     notes: str = ""
 
     def __post_init__(self):
+        if self.task not in {None, "flip", "polish"}:
+            raise ValueError("task must be flip or polish")
         for name in ("action_hz", "max_input_age_s", "max_observation_age_s", "inference_timeout_s", "max_state_camera_skew_s"):
             v = getattr(self, name)
             if not math.isfinite(v) or v <= 0:

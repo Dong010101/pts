@@ -1,65 +1,26 @@
-# PTS：基于现有 OpenPI / ForceBench 的独立复现
+# PTS：冻结 OpenPI 策略的路径保持时间缩放
 
-对应论文 [Same Path, Less Time: Training-Free Fast Execution of Vision-Language-Action Models under Inference Latency](https://arxiv.org/abs/2611.01390v1)。本目录按正文 R1–R4 和附录 B 实现，不是作者发布的官方代码。目录与 `LaWAM`、`openpi`、`ForceBenchWeb` 并列。
+对应论文 [Same Path, Less Time](https://arxiv.org/abs/2611.01390v1) 的独立实现。支持 Flexiv 原始 π0.5 flip / polish 15 Hz checkpoint；绝对 TCP 输出通过 SO(3) 路径接续适配。
 
-**当前交付：可运行的 PTS 核心、π0.5 服务端、ForceBench 真机适配和离线验证。未执行真机实验，不能据此声称复现了论文成功率或加速比。** 论文评测使用 LIBERO 相对增量控制；当前真机模型输出绝对 TCP 位姿，本实现明确保留了这项适配差异。
+## Flip / polish 真机试次
 
-## 环境与入口
+**默认任务已改为 flip。部署、完整模型服务命令、成功停止、评分和导出见 [真机操作说明](docs/REAL_ROBOT.md)。**
 
-不新建 conda 环境，也不升级现有依赖。`scripts/python.sh` 通过 `PYTHONPATH` 加载本目录及相邻项目：
-
-| 进程 | 复用环境 | 依赖/职责 |
-| --- | --- | --- |
-| 推理服务 | `../openpi/.venv/bin/python` | 已有 OpenPI、JAX/PyTorch、CUDA、模型权重和归一化统计 |
-| 真机控制 | 机器人机器上的原 ForceBench 环境 | NumPy、SciPy、PyYAML、websockets、HDF5、视频编码，以及已部署的 easyrobot、flexivrdk、pyrealsense2 |
-| 本机 mock / 单元测试 | OpenPI 环境 | 复用本机可用的 ForceBench、NumPy/SciPy、pytest 等 |
-
-控制端只导入 PTS 数值核心和 ForceBench，不需要安装 OpenPI 模型依赖。两个进程可以在不同机器，使用 OpenPI 原有 WebSocket 协议通信。当前计算节点未安装三项真机 SDK；在已有机器人控制环境中执行硬件命令。
-
-可覆盖路径：`PTS_PYTHON` 指定已有 Python，`PTS_FORCEBENCH_ROOT` 指定 ForceBench 源码根目录，`PTS_OPENPI_ROOT` 指定 OpenPI 根目录。脚本在发现本机 `../models/openpi/big_vision/paligemma_tokenizer.model` 缓存时设置 `OPENPI_DATA_HOME`；用户显式设置的值优先。
+`configs/flip_15hz.yaml` 和 `configs/polish_15hz.yaml` 默认 `rate_cap=1`，实测执行器边界为空；高于 1× 必须提供标定结果。夹爪与延迟初值仍需按本机测量。旧 `robot_15hz.yaml`、`mock_15hz.yaml` 保留供显式指定；模拟边界不是硬件标定值。
 
 ```bash
-cd /mnt/work/shidong/repos/PTS
 bash scripts/python.sh -m pytest -q
-bash scripts/python.sh -m pts.run --mock --duration 10
+bash scripts/python.sh -m pts.run --task flip --mock --duration 3 --session flip_mock_01
+bash scripts/python.sh -m pts.run --task polish --mock --duration 3 --session polish_mock_01
 ```
 
-`--mock` 使用合成策略、机器人、相机；`--dry-run` 使用真实推理服务与模拟硬件；只有显式 `--hardware` 才打开真机设备。每次运行创建独立的 `artifacts/pts_时间戳/`，不会覆盖已有 trial。
+默认使用模拟设备；`--dry-run` 使用真实模型和模拟设备；`--hardware` 才执行任务 ready pose 和真实运动。服务端新增 `--task flip|polish`、`--inspect`，在加载权重前核对匹配训练配置、动作变换和 checkpoint 自带统计，补齐进程内动作/频率元数据，不修改共享 OpenPI 源码。
 
-## 真机流程
+服务端使用含这两个训练配置的 OpenPI 版本。通过 `PTS_OPENPI_ROOT`、`PTS_PYTHON`、`PTS_FORCEBENCH_ROOT` 指定已有源码和环境；新机器需设置 tokenizer 缓存 `OPENPI_DATA_HOME`。控制端不需要加载模型依赖。
 
-1. 在推理机启动 PTS 服务，传入与真机数据、动作频率匹配的训练配置及 checkpoint。
-2. 在控制机指定原 ForceBench 配置和环境。程序先验证服务元数据，用黑图和零状态预热模型并丢弃输出；随后进入原有 ready pose、相机和控制器初始化流程。
-3. 先使用 `robot_15hz.yaml` 的异步单步 1× 配置检查任务行为。测定执行器线性范围、夹爪时长和传感器时间对齐后，生成校准配置，再比较 1× 与加速版本。
-4. 在开发场景选择 rate cap，冻结配置后，在相同测试场景评估成功率和所有尝试的总耗时。
+所有试次先做不计时的合成输入预热和设备准备，首个任务观测前开始计时，包含首次真实推理。默认超时 60 秒。`--duration` 是超时上限，不是成功条件；使用显式信号报告成功/失败，或停止为待评分。视频、HDF5 和统一的 `trial_result.json` 均保存在 `<output>/<session>/`。
 
-推理机示例，`PTS_CKPT` 必须换成实际的真机 checkpoint：
-
-```bash
-export PTS_CKPT=/absolute/path/to/real_robot_checkpoint
-CUDA_VISIBLE_DEVICES=0 XLA_PYTHON_CLIENT_PREALLOCATE=false \
-  bash scripts/python.sh -m pts.server \
-  --config pi05_full_peg_in_hole_z_15hz \
-  --checkpoint "$PTS_CKPT" --host 0.0.0.0 --port 8025
-```
-
-若使用 LoRA 或其他任务，改成对应的训练 config；不要只改 checkpoint 而保留不匹配的 config。checkpoint 中需要包含模型参数和训练时的归一化 assets。服务元数据包含 decoder、积分步数、动作维度、horizon 和 checkpoint。
-
-控制机示例，先在本机挂载或复制 PTS 目录，再使用已能运行真机的 Python：
-
-```bash
-conda activate forcebench-runtime
-export PTS_PYTHON="$(command -v python)"
-export PTS_FORCEBENCH_ROOT=/path/to/existing/ForceBench
-bash scripts/python.sh -m pts.run --hardware \
-  --run-config "$PTS_FORCEBENCH_ROOT/configs/runs/peg_in_hole_v2_200sets_15hz_pi05.yaml" \
-  --pts-config configs/robot_15hz.yaml \
-  --endpoint ws://INFERENCE_HOST:8025 --duration 30
-```
-
-`--hardware` 会执行现有配置中的 ready pose，随后运动；`Ctrl+C` / SIGTERM 通过原驱动执行停止和资源清理。`--duration` 是试验运行时间上限，不含预热及 ready 阶段。任务是否成功仍由实验评分决定，程序不会把正常退出记成任务成功。`--visualize` 可开启原 ForceBench 预测可视化。
-
-当前接入点是独立 trial CLI，复用 ForceBench 的设备、预处理、动作解码、准备/停止、HDF5 和视频记录；尚未向原 Web UI 添加 PTS 方法选项。
+`--decoder stochastic_10_step` 可运行 PTS-K；`--rate-cap 1` 可作为相同解码器下的异步基线。服务端和控制端解码声明必须一致。
 
 ## 实现与论文的对应关系
 

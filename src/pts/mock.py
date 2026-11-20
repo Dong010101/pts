@@ -20,10 +20,10 @@ class FreshMockRobot(MockRobotDriver):
 
 
 class MockTransport:
-    def __init__(self, capabilities=None, *, delay=0.12, horizon=50, decoder="zero_noise_one_step"):
+    def __init__(self, capabilities=None, *, delay=0.12, horizon=50, decoder="zero_noise_one_step", task=None):
         self.capabilities = capabilities or {}
         self.delay, self.horizon = delay, horizon
-        self.server_metadata = {"control_frequency_hz": 15, "pts": {
+        self.server_metadata = {"task": task, "control_frequency_hz": 15, "pts": {
             "decoder": decoder, "num_steps": 1 if decoder == "zero_noise_one_step" else 10,
             "action_horizon": horizon, "action_dim": 32, "action_space": "absolute_tcp",
             "config": "SYNTHETIC_FIXTURE", "checkpoint": None,

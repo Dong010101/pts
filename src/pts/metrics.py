@@ -12,16 +12,18 @@ def summarize(rows):
     groups = defaultdict(list)
     seen = set()
     for row in rows:
-        key = (row["method"], row["trial_id"])
+        group = tuple(row.get(k, "") for k in ("task", "mode")) + (row["method"],)
+        key = (group, row["trial_id"])
         if key in seen:
             raise ValueError(f"duplicate trial: {key}")
         seen.add(key)
         success, duration, steps = int(row["success"]), float(row["duration_s"]), float(row["control_steps"])
         if success not in (0, 1) or not all(math.isfinite(x) and x > 0 for x in (duration, steps)):
             raise ValueError("each trial needs success 0/1 and positive finite duration/steps")
-        groups[row["method"]].append((success, duration, steps))
+        groups[group].append((success, duration, steps))
     result = {}
-    for method, trials in sorted(groups.items()):
+    for group, trials in sorted(groups.items()):
+        method = "/".join(part for part in group if part)
         successes = sum(t[0] for t in trials)
         seconds, steps = sum(t[1] for t in trials), sum(t[2] for t in trials)
         result[method] = {

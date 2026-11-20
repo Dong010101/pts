@@ -24,7 +24,8 @@ def test_decoder_noise_includes_padding_and_preserves_postprocessing():
 def test_factory_sets_model_integration_steps(monkeypatch, decoder, steps):
     policy_config, training_config = ModuleType("policy_config"), ModuleType("training_config")
     config = SimpleNamespace(model=SimpleNamespace(pi05=True, action_horizon=50, action_dim=32),
-                             policy_metadata={"action": "next_frame_absolute_tcp_pose_and_gripper_command[7]"})
+                             policy_metadata={"action": "next_frame_absolute_tcp_pose_and_gripper_command[7]",
+                                              "control_frequency_hz": 15})
     training_config.get_config = lambda _: config
     captured = {}
     def create(config_arg, checkpoint, **kwargs):
